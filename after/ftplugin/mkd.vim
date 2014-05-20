@@ -6,6 +6,64 @@
 "
 " original version from Steve Losh's gist: https://gist.github.com/1038710
 
+function! MarkdownFold(lnum)
+  "let head = s:head(a:lnum)
+  let head = s:head_code(a:lnum)
+  if head
+    return head
+  "elseif a:lnum != line('$')
+  "  let next = s:head(a:lnum + 1)
+  "  if next
+  "    return '<' . next
+  "  endif
+  endif
+  if s:is_code
+    return '='
+  else
+    return '0'
+  endif
+endfunction
+
+let s:is_code = 0
+function! s:head_code(lnum)
+  let current = getline(a:lnum)
+  let sharps = strlen(matchstr(current, '^```'))
+  if sharps
+    if s:is_code
+      let s:is_code=0
+    else
+      let s:is_code=1
+    endif
+    return 1
+  endif
+  return 0
+endfunction
+
+
+function! s:head(lnum)
+  let current = getline(a:lnum)
+  let sharps = strlen(matchstr(current, '^#*'))
+  if sharps
+    return sharps
+  endif
+
+  " <h2> <h3> ...
+  let h = matchstr(current, '^\s*<\s*h\zs\d\ze\>') - 0
+  if h
+    return h
+  endif
+
+  if current =~ '\S'
+    let next = getline(a:lnum + 1)
+    if next =~ '^=\+$'
+      return 1
+    elseif next =~ '^-\+$'
+      return 2
+    endif
+  endif
+  return 0
+endfunction
+
 func! Foldexpr_markdown(lnum)
     if (a:lnum == 1)
         let l0 = ''
@@ -37,7 +95,7 @@ endfunc
 
 
 if !exists("g:vim_markdown_folding_disabled")
-  setlocal foldexpr=Foldexpr_markdown(v:lnum)
+  setlocal foldexpr=MarkdownFold(v:lnum)
   setlocal foldmethod=expr
 
   " allow the initial foldlevel to be configured in .vimrc
